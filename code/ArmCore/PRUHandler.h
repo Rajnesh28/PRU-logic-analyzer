@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <stdint.h>
+#include <fcntl.h>
 
+#define DEBUG                     1
 #define PAGESIZE                  4096
 #define PRU_SHARED_MEM_PHYS_ADDR  0x4A310000
 #define PRU_SHARED_MEM_SIZE       12288
@@ -18,13 +21,13 @@ typedef struct {
     uint32_t*         pru_shared_mem; 
 } PRUHandler_t;
 
-void PRU_init(size_t requestedTraceSize, PRUHandler_t* pruHandler);
+void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler);
 
-void PRU_load_firmware();
+void PRU_load_firmware(void);
 
 void PRU_start(void);
 
-void PRU_trace(const char* bin);
+void PRU_trace(PRUHandler_t *pruHandler);
 
 void PRU_stop(void);
 

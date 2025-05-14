@@ -15,13 +15,13 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
                                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
                                                 
     if (pruHandler->ddr_copy_buf == MAP_FAILED) {
-        perror("Could not allocate %d in address space using mmap()\n", requestedTraceSize);
+        printf("Could not allocate %ld in address space using mmap()\n", requestedTraceSize);
         exit(-1);
     }
 
     int fd = open("/dev/mem", O_RDONLY | O_SYNC);
     if (fd < 0) {
-        perror("Cannot access phyical memory\n");
+        printf("Cannot access phyical memory\n");
         exit(-1);
     }
 
@@ -29,7 +29,7 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
         MAP_SHARED, fd, PRU_SHARED_MEM_PHYS_ADDR);
         
     if (pruHandler->pru_shared_mem == MAP_FAILED) {
-        perror("Could not map physical memory into virtual memory space\n");
+        printf("Could not map physical memory into virtual memory space\n");
         exit(-1);
     }
     return;
@@ -41,11 +41,11 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
 * 
 * Warning: Must have pru_fw.bin (compiled with clpru) present in ../firmware/ folder 
 */
-void PRU_load_firmware() {
+void PRU_load_firmware(void) {
     int ret;
     ret = system("cp ../firmware/pru_fw.bin /lib/firmware/am335x-pru1-fw");
     if (ret == -1) {
-        perror("Could not load firmware to PRU1 core\n");
+        printf("Could not load firmware to PRU1 core\n");
         exit(-1);
     }
 };
@@ -59,7 +59,7 @@ void PRU_start(void) {
     int ret;
     ret = system("echo start | sudo tee /sys/class/remoteproc2/remoteproc/state");
     if (ret == -1) {
-        perror("Could not start the PRU1 core\n");
+        printf("Could not start the PRU1 core\n");
         exit(-1);
     }
     
@@ -108,7 +108,7 @@ void PRU_stop(void) {
     int ret;
     ret = system("echo stop | sudo tee /sys/class/remoteproc2/remoteproc/state");
     if (ret == -1) {
-        perror("Could not stop the PRU1 core\n");
+        printf("Could not stop the PRU1 core\n");
         exit(-1);
     }
 
