@@ -20,7 +20,6 @@ int appendHeader(FILE* fptr) {
         return FAILURE;
 
     fprintf(fptr, "$date\n");
-    fprintf(fptr, "   ");
     if (!appendDate(fptr))
         return FAILURE;
     fprintf(fptr, "$end\n");
@@ -29,11 +28,11 @@ int appendHeader(FILE* fptr) {
     fprintf(fptr, "   Sample VCD Generator\n");
     fprintf(fptr, "$end\n");
 
-    fprintf(fptr, "$timescale 1ns $end\n\n");
-    fprintf(fptr, "$scope module top $end\n\n");
-    fprintf(fptr, "$var wire 1 ! clk $end\n\n");
+    fprintf(fptr, "$timescale 1ns $end\n");
+    fprintf(fptr, "$scope module top $end\n");
+    fprintf(fptr, "$var wire 1 ! clk $end\n");
     fprintf(fptr, "$upscope $end\n");
-    fprintf(fptr, "$enddefinitions $end\n\n");
+    fprintf(fptr, "$enddefinitions $end\n");
     return SUCCESS;
 }
 
@@ -62,10 +61,6 @@ int insertSampledData(FILE* fptr, size_t sampling_rate) {
         return FAILURE;
     }
 
-    /* The contents of a file mapping (as opposed to an anonymous
-       mapping; see MAP_ANONYMOUS below), are initialized using length
-       bytes starting at offset offset in the file (or other object)
-       referred to by the file descriptor fd.*/
     volatile unsigned int *shared_mem = mmap(NULL, PRU_SHARED_MEM_SIZE_IN_BYTES,
         PROT_READ, MAP_SHARED, fd, PRU_SHARED_MEM_PHYS_ADDR);
 
@@ -75,21 +70,14 @@ int insertSampledData(FILE* fptr, size_t sampling_rate) {
         return FAILURE;
     }
 
-    fprintf(fptr, "#0\n");
-    fprintf(fptr, "$dumpvars\n");
-    int init = shared_mem[0];
-    init = (init == 32768) ? 1 : 0;
-    fprintf(fptr, "%d!\n", init);
-    fprintf(fptr, "$end\n\n");
-    for (int i = 1; i < PRU_SHARED_MEM_SIZE_IN_DWORDS; i++) {
+    for (int i = 0; i < PRU_SHARED_MEM_SIZE_IN_DWORDS; i++) {
         unsigned int value = shared_mem[i];
-	fprintf(fptr, "#%d\n", sampling_rate * i);
-    	if (shared_mem[i] == 32768) {
-		fprintf(fptr, "1!\n\n");
-	}
-	else if (shared_mem[i] == 0) {
-    		fprintf(fptr, "0!\n\n");
-	}
+
+        fprintf(fptr, "#%d\n", sampling_rate * i);
+        if (value == 32768)
+            fprintf(fptr, "1!\n");
+        else
+            fprintf(fptr, "0!\n");
     }
 
     munmap((void *)shared_mem, PRU_SHARED_MEM_SIZE_IN_BYTES);

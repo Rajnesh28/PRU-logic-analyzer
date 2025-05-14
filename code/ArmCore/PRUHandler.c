@@ -19,13 +19,14 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
         exit(-1);
     }
 
-    int fd = open("/dev/mem", O_RDONLY | O_SYNC);
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) {
         printf("Cannot access phyical memory\n");
         exit(-1);
     }
 
-    pruHandler->pru_shared_mem = (uint32_t*) mmap(NULL, requestedTraceSize, PROT_READ, 
+    pruHandler->pru_shared_mem_fd  = fd;
+    pruHandler->pru_shared_mem = (uint32_t*) mmap(NULL, PRU_SHARED_MEM_SIZE, PROT_READ | PROT_WRITE, 
         MAP_SHARED, fd, PRU_SHARED_MEM_PHYS_ADDR);
         
     if (pruHandler->pru_shared_mem == MAP_FAILED) {
@@ -43,7 +44,7 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
 */
 void PRU_load_firmware(void) {
     int ret;
-    ret = system("cp ../firmware/pru_fw.bin /lib/firmware/am335x-pru1-fw");
+    ret = system("cp ../PRU/bin/pru_fw /lib/firmware/am335x-pru1-fw");
     if (ret == -1) {
         printf("Could not load firmware to PRU1 core\n");
         exit(-1);
@@ -57,7 +58,7 @@ void PRU_load_firmware(void) {
 */
 void PRU_start(void) {
     int ret;
-    ret = system("echo start | sudo tee /sys/class/remoteproc2/remoteproc/state");
+    ret = system("echo start | sudo tee /sys/class/remoteproc/remoteproc2/state");
     if (ret == -1) {
         printf("Could not start the PRU1 core\n");
         exit(-1);
@@ -73,14 +74,15 @@ void PRU_start(void) {
  * to the mapped address in memory.
 */
 void PRU_trace(PRUHandler_t *pruHandler) {
-    volatile uint32_t* shared_mem_base_address = pruHandler->pru_shared_mem;
+    volatile uint32_t* shared_mem_base_address = pruHandler->pru_shared_mem; 
     uint32_t*          ddr_buf                 = pruHandler->ddr_copy_buf;
 
     PRU_start();
 
     int index   = 0;
     int counter = 0;
-    while (pruHandler->word_count < pruHandler->requested_trace_size) {
+    int requested_trace_size_in_dwords = pruHandler->requested_trace_size / 4;
+    while (pruHandler->word_count < 6144) {
         while (*(shared_mem_base_address) == 0);
 
         if (*(shared_mem_base_address) == 1) {
@@ -90,9 +92,9 @@ void PRU_trace(PRUHandler_t *pruHandler) {
 
         else if (*(shared_mem_base_address) == 2) {
             for (int i = 0; i < 1532; i++) 
-                ddr_buf[index + i] = *(shared_mem_base_address + HEADER_OFFSET + i + 1532)
+                ddr_buf[index + i] = *(shared_mem_base_address + HEADER_OFFSET + i + 1532);
             *(shared_mem_base_address) = 0; }
-
+	index += 1532;
         pruHandler->word_count += 1532;
     }
 
@@ -106,7 +108,7 @@ void PRU_trace(PRUHandler_t *pruHandler) {
 */
 void PRU_stop(void) {
     int ret;
-    ret = system("echo stop | sudo tee /sys/class/remoteproc2/remoteproc/state");
+    ret = system("echo stop | sudo tee /sys/class/remoteproc/remoteproc2/state");
     if (ret == -1) {
         printf("Could not stop the PRU1 core\n");
         exit(-1);
@@ -125,13 +127,15 @@ void PRU_stop(void) {
 */
 void PRU_cleanup(PRUHandler_t *pruHandler) {
     munmap(pruHandler->ddr_copy_buf, pruHandler->requested_trace_size);
+    munmap(pruHandler->pru_shared_mem, PRU_SHARED_MEM_SIZE);
+    close(pruHandler->pru_shared_mem_fd);
 }
 
 #ifdef DEBUG
 void print_buffer(PRUHandler_t* pruHandler) {
     uint8_t* ddrPtr8bit = (uint8_t*)pruHandler->ddr_copy_buf;
     
-    for (int i = 0; i < pruHandler->requested_trace_size * 4; i++)
+    for (int i = 0; i < 24576; i++)
         printf("Index: %d, Data: %d\n", i, ddrPtr8bit[i]);        
 
     return;

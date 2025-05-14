@@ -6,14 +6,16 @@
 #include <sys/mman.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #define DEBUG                     1
 #define PAGESIZE                  4096
 #define PRU_SHARED_MEM_PHYS_ADDR  0x4A310000
-#define PRU_SHARED_MEM_SIZE       12288
+#define PRU_SHARED_MEM_SIZE       12288 // in-bytes
 #define HEADER_OFFSET             0x8
 
 typedef struct {
+    int		      pru_shared_mem_fd;
     volatile uint32_t complete_flag;
     uint32_t          word_count;
     size_t            requested_trace_size;

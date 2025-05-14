@@ -1,0 +1,3 @@
+CC = 
+CFLAGS = 
+T
