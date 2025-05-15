@@ -9,15 +9,15 @@
 #include <unistd.h>
 
 #define DEBUG                     1
-#define PAGESIZE                  4096
+#define PAGE_SIZE                 4096
 #define BYTES_PER_DWORD           0x4
-#define HEADER_OFFSET             0x8
+#define HEADER_OFFSET             0x8   // in-dwords
 #define PRU_SHARED_MEM_PHYS_ADDR  0x4A310000
 #define PRU_SHARED_MEM_SIZE       12288 // in-bytes
 #define PING_PONG_HALF_SIZE       (PRU_SHARED_MEM_SIZE - (HEADER_OFFSET) * BYTES_PER_DWORD) / 2
 
 typedef struct {
-    int		      pru_shared_mem_fd;
+    int		          pru_shared_mem_fd;
     volatile uint32_t complete_flag;
     uint32_t          word_count;
     size_t            requested_trace_size;
@@ -26,15 +26,10 @@ typedef struct {
 } PRUHandler_t;
 
 void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler);
-
-void PRU_load_firmware(void);
-
-void PRU_start(void);
-
+int PRU_load_firmware(void);
+int PRU_start(void);
 void PRU_trace(PRUHandler_t *pruHandler);
-
-void PRU_stop(void);
-
+int PRU_stop(void);
 void PRU_cleanup(PRUHandler_t* pruHandler);
 
 #ifdef DEBUG

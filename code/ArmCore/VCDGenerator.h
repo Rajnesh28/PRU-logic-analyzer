@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <time.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -10,14 +11,20 @@
 
 #define SUCCESS 1
 #define FAILURE 0
+#define SAMPLING_RATE 5
 
-#define PRU_SHARED_MEM_PHYS_ADDR      0x4a310000
-#define PRU_SHARED_MEM_SIZE_IN_BYTES  12000
-#define PRU_SHARED_MEM_SIZE_IN_DWORDS (PRU_SHARED_MEM_SIZE_IN_BYTES / 4)
+typedef struct {
+    FILE* fptr;
+    uint32_t sampling_rate;
+    uint8_t* ddr_copy_buf;
+    size_t trace_size;
+} VCDGenerator_t;
 
-int generateVCD(FILE* fptr);
-int appendHeader(FILE* fptr);
-int appendDate(FILE* fptr);
-int insertSampledData(FILE* fptr, size_t sampling_rate);
+void VCDGenerator_init(VCDGenerator_t* vcdGenerator, uint8_t* ddrCopyBuf, size_t traceSize);
+int VCDGenerator_createWaveform(VCDGenerator_t* vcdGenerator);
+int VCDGenerator_appendHeader(VCDGenerator_t* vcdGenerator);
+int VCDGenerator_appendDate(VCDGenerator_t* vcdGenerator);
+int VCDGenerator_insertSampledData(VCDGenerator_t* vcdGenerator);
+void VCDGenerator_cleanup(VCDGenerator_t* vcdGenerator);
 
 #endif // VCDGENERATOR_H
