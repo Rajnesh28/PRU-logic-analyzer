@@ -4,20 +4,26 @@
  * Initializes the PRUHandler_t struct
  * Allocates memory in address space based on requested trace size. 
  *
- * @param requestedTraceSize - Size of the requested trace size in 32-bit words
+ * @param requestedTraceSize - Size of the requested trace size in bytes
  * @param pruHandler         - PRUHandler_t struct object to initialize
 */
 void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
     pruHandler->complete_flag  = 0;
     pruHandler->word_count     = 0;
     pruHandler->requested_trace_size = requestedTraceSize;
-    pruHandler->ddr_copy_buf = (uint32_t*) mmap(NULL, requestedTraceSize, PROT_READ | PROT_WRITE,
-                                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-                                                
-    if (pruHandler->ddr_copy_buf == MAP_FAILED) {
-        printf("Could not allocate %ld in address space using mmap()\n", requestedTraceSize);
-        exit(-1);
+    pruHandler->ddr_copy_buf   = (uint32_t*) malloc(requestedTraceSize);
+//    pruHandler->ddr_copy_buf = (uint32_t*) mmap(NULL, requestedTraceSize, PROT_READ | PROT_WRITE,
+//                                                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if (pruHandler->ddr_copy_buf == NULL) {
+	printf("Could not allocate memory using malloc(), considering reducing trace size\n");
+    	exit(-1);
     }
+
+//    if (pruHandler->ddr_copy_buf == MAP_FAILED) {
+//        printf("Could not allocate %ld in address space using mmap()\n", requestedTraceSize);
+//        exit(-1);
+//    }
 
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) {
@@ -82,20 +88,27 @@ void PRU_trace(PRUHandler_t *pruHandler) {
     int index   = 0;
     int counter = 0;
     int requested_trace_size_in_dwords = pruHandler->requested_trace_size / 4;
-    while (pruHandler->word_count < 6144) {
+    int ping_or_pong_buffer_size_in_dwords = PING_PONG_HALF_SIZE / BYTES_PER_DWORD;
+
+    while (pruHandler->word_count < requested_trace_size_in_dwords) {
         while (*(shared_mem_base_address) == 0);
 
         if (*(shared_mem_base_address) == 1) {
-            for (int i = 0; i < 1532; i++)
+	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords)
+		break;
+            for (int i = 0; i < ping_or_pong_buffer_size_in_dwords; i++)
                 ddr_buf[index + i] =  *(shared_mem_base_address + HEADER_OFFSET + i);
             *(shared_mem_base_address) = 0; }
 
         else if (*(shared_mem_base_address) == 2) {
-            for (int i = 0; i < 1532; i++) 
-                ddr_buf[index + i] = *(shared_mem_base_address + HEADER_OFFSET + i + 1532);
+	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords)
+		break;
+            for (int i = 0; i < ping_or_pong_buffer_size_in_dwords; i++) 
+                ddr_buf[index + i] = *(shared_mem_base_address + HEADER_OFFSET + i + ping_or_pong_buffer_size_in_dwords);
             *(shared_mem_base_address) = 0; }
-	index += 1532;
-        pruHandler->word_count += 1532;
+
+	    index += ping_or_pong_buffer_size_in_dwords;
+        pruHandler->word_count += ping_or_pong_buffer_size_in_dwords;
     }
 
     pruHandler->complete_flag = 1;
@@ -126,18 +139,19 @@ void PRU_stop(void) {
  *          as this will unmap the address space with the traced data.
 */
 void PRU_cleanup(PRUHandler_t *pruHandler) {
-    munmap(pruHandler->ddr_copy_buf, pruHandler->requested_trace_size);
+
+//    munmap(pruHandler->ddr_copy_buf, pruHandler->requested_trace_size);
+    free(pruHandler->ddr_copy_buf);
     munmap(pruHandler->pru_shared_mem, PRU_SHARED_MEM_SIZE);
     close(pruHandler->pru_shared_mem_fd);
 }
 
 #ifdef DEBUG
 void print_buffer(PRUHandler_t* pruHandler) {
-    uint8_t* ddrPtr8bit = (uint8_t*)pruHandler->ddr_copy_buf;
+    uint8_t* ddrPtr8bit = (uint8_t*) pruHandler->ddr_copy_buf;
     
-    for (int i = 0; i < 24576; i++)
+    for (int i = 0; i < pruHandler->requested_trace_size; i++)
         printf("Index: %d, Data: %d\n", i, ddrPtr8bit[i]);        
-
     return;
 }
 #endif // DEBUG

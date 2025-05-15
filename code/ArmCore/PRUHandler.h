@@ -10,9 +10,11 @@
 
 #define DEBUG                     1
 #define PAGESIZE                  4096
+#define BYTES_PER_DWORD           0x4
+#define HEADER_OFFSET             0x8
 #define PRU_SHARED_MEM_PHYS_ADDR  0x4A310000
 #define PRU_SHARED_MEM_SIZE       12288 // in-bytes
-#define HEADER_OFFSET             0x8
+#define PING_PONG_HALF_SIZE       (PRU_SHARED_MEM_SIZE - (HEADER_OFFSET) * BYTES_PER_DWORD) / 2
 
 typedef struct {
     int		      pru_shared_mem_fd;

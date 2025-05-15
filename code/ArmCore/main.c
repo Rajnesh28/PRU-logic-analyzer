@@ -1,9 +1,19 @@
 #include "PRUHandler.h"
-#define PAGE_SIZE 4096
-int main() {
-    size_t size_request = 4096 * 10;
+int main(int argc, char* argv[]) {
+
+    if (argc < 2) {
+        printf("Did not successfully pass a size argument\n");
+        return -1;
+    }
+
+    size_t trace_size = (size_t) atoi(argv[1]);
+    if (trace_size < PAGESIZE ) {
+        printf("Requested trace size must be at least the length of a PAGE SIZE (4096 bytes) and be page aligned\n");
+        return -1;
+    }
+
     PRUHandler_t pru_handler;
-    PRU_init(size_request, &pru_handler);
+    PRU_init(trace_size, &pru_handler);
     PRU_load_firmware();
     PRU_trace(&pru_handler);
     print_buffer(&pru_handler);
