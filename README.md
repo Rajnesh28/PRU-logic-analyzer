@@ -98,7 +98,7 @@ The PRU writes to one half of the buffer and toggles a flag for the ARM core to 
 ### Performance Notes
 
 * The PRU operates at **200 MHz**, with instructions executing in **1 cycle** due to its zero-stage pipeline architecture.
-* The main polling loop on the ARM side is carefully minimized for **predictable latency**.
+* The main polling loop on the PRU side is carefully minimized to sample the GPIO as fast as possible.
 * Based on the Nyquist-Shannon theorem, the theoretical maximum traceable signal frequency is **half the loop execution frequency**.
 
 Fortunately, while the PRU code is written in C, we may use the disassembler to see the assembly instructions and try and estimate the maximum sampling frequency. ## To-do
