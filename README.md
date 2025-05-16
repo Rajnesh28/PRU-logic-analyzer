@@ -119,4 +119,3 @@ This implementation avoids the RPMsg framework to eliminate messaging overhead a
 * [ ] Investigate trace count mismatch on some inputs
 * [ ] Optimize PRU for even shorter trace loop (switch to assembly)
 * [ ] Add Makefile and clarify assumptions for user-friendliness
-The flagging mechanism between the PRU and the Arm Core is shared memory instead of the RPMsg framework since that introduces overhead and we are looking for ultra-low latency to allow us to analyze the fastest possible signal without aliasing (ensuring that while loop is as short as possible).
