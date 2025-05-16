@@ -1,27 +1,58 @@
 #include "VCDGenerator.h"
 
-// Assumes caller opens fptr* in append mode
-int generateVCD(FILE* fptr) {
+/**
+ * Initializes a VCDGenerator_t instance with buffer, size, and file handle.
+ *
+ * @param vcdGenerator  VCDGenerator_t object to initialize
+ * @param ddrCopyBuf    Pointer to DDR buffer containing trace data
+ * @param traceSize     Size of the trace in bytes
+*/
+void VCDGenerator_init(VCDGenerator_t* vcdGenerator, uint8_t* ddrCopyBuf, size_t traceSize) {
+    vcdGenerator->fptr          = fopen("wave.vcd", "w");
+    if (vcdGenerator->fptr == NULL) {
+        printf("Could not create a valid waveform file: wave.vcd\n");
+        return;
+    }
+
+    vcdGenerator->sampling_rate = SAMPLING_RATE;
+    vcdGenerator->ddr_copy_buf  = ddrCopyBuf;
+    vcdGenerator->trace_size    = traceSize;
+}
+
+/**
+ * Generates a complete VCD file for waveform viewing (e.g., in GTKWave).
+ * 
+ * Wraps header creation and trace data insertion.
+ *
+ * @param vcdGenerator  Initialized VCDGenerator_t object
+*/
+int VCDGenerator_createWaveform(VCDGenerator_t* vcdGenerator) {
     int status;
-    status = appendHeader(fptr);
+    status = VCDGenerator_appendHeader(vcdGenerator);
     if (!status)
         return FAILURE;
 
-    status = insertSampledData(fptr, 35); // Loop has 7 instructions, clock is 200MHz -> 7 * 5ns
+    status = VCDGenerator_insertSampledData(vcdGenerator); 
     if (!status)
         return FAILURE;
 
-    fclose(fptr);
     return SUCCESS;
 }
 
-int appendHeader(FILE* fptr) {
+/**
+* Appends header information to the VCD file including the date
+*
+* @param pruHandler         - VCDGenerator_t struct object
+*/
+int VCDGenerator_appendHeader(VCDGenerator_t* vcdGenerator) {
+    FILE* fptr = vcdGenerator->fptr;
+
     if (!fptr)
         return FAILURE;
 
     fprintf(fptr, "$date\n");
     fprintf(fptr, "   ");
-    if (!appendDate(fptr))
+    if (!VCDGenerator_appendDate(vcdGenerator))
         return FAILURE;
     fprintf(fptr, "$end\n");
 
@@ -31,17 +62,24 @@ int appendHeader(FILE* fptr) {
 
     fprintf(fptr, "$timescale 1ns $end\n\n");
     fprintf(fptr, "$scope module top $end\n\n");
-    fprintf(fptr, "$var wire 1 ! clk $end\n\n");
+    fprintf(fptr, "$var wire 8 B signal_in $end\n\n");
     fprintf(fptr, "$upscope $end\n");
     fprintf(fptr, "$enddefinitions $end\n\n");
     return SUCCESS;
 }
 
-int appendDate(FILE* fptr) {
+/**
+* Appends date information to the VCD file
+*
+* @param pruHandler         - VCDGenerator_t struct object
+*/
+int VCDGenerator_appendDate(VCDGenerator_t* vcdGenerator) {
+    FILE* fptr = vcdGenerator->fptr;
+
     if (!fptr)
         return FAILURE;
 
-    time_t t = time(NULL);
+    time_t t      = time(NULL);
     struct tm *tm = localtime(&t);
     char s[64];
     size_t ret = strftime(s, sizeof(s), "%c", tm);
@@ -52,47 +90,56 @@ int appendDate(FILE* fptr) {
     return SUCCESS;
 }
 
-int insertSampledData(FILE* fptr, size_t sampling_rate) {
+/**
+* Loops over the entire DDR trace buffer and completes the
+* VCD file by plotting the trace data at intervals dictated by 
+* vcdGenerator->sampling_rate
+*
+* @param pruHandler         - VCDGenerator_t struct object
+*/
+int VCDGenerator_insertSampledData(VCDGenerator_t* vcdGenerator) {
+    uint32_t value;
+    int init;
+
+    FILE* fptr             = vcdGenerator->fptr;
+    uint8_t* shared_mem    = vcdGenerator->ddr_copy_buf;
+    uint32_t sampling_rate = vcdGenerator->sampling_rate;
+    size_t trace_size      = vcdGenerator->trace_size;
+
     if (!fptr)
         return FAILURE;
 
-    int fd = open("/dev/mem", O_RDONLY | O_SYNC);
-    if (fd < 0) {
-        perror("Cannot access physical memory!\n");
-        return FAILURE;
-    }
+    fprintf(fptr, "$dumpvars\n\n");
+    
+    init = shared_mem[0];
+    
+    fprintf(fptr, "# Initial value \n");
+    fprintf(fptr, "b");
 
-    /* The contents of a file mapping (as opposed to an anonymous
-       mapping; see MAP_ANONYMOUS below), are initialized using length
-       bytes starting at offset offset in the file (or other object)
-       referred to by the file descriptor fd.*/
-    volatile unsigned int *shared_mem = mmap(NULL, PRU_SHARED_MEM_SIZE_IN_BYTES,
-        PROT_READ, MAP_SHARED, fd, PRU_SHARED_MEM_PHYS_ADDR);
+    for (int i = 7; i >= 0; i--)
+	    fprintf(fptr, "%d", (shared_mem[0] >> i) & 1);
 
-    if (shared_mem == MAP_FAILED) {
-        perror("Could not map PRU shared memory in process!\n");
-        close(fd);
-        return FAILURE;
-    }
-
-    fprintf(fptr, "#0\n");
-    fprintf(fptr, "$dumpvars\n");
-    int init = shared_mem[0];
-    init = (init == 32768) ? 1 : 0;
-    fprintf(fptr, "%d!\n", init);
+    fprintf(fptr, "B\n", init);
     fprintf(fptr, "$end\n\n");
-    for (int i = 1; i < PRU_SHARED_MEM_SIZE_IN_DWORDS; i++) {
-        unsigned int value = shared_mem[i];
-	fprintf(fptr, "#%d\n", sampling_rate * i);
-    	if (shared_mem[i] == 32768) {
-		fprintf(fptr, "1!\n\n");
-	}
-	else if (shared_mem[i] == 0) {
-    		fprintf(fptr, "0!\n\n");
-	}
+
+    for (int i = 1; i < trace_size; i++) {
+        value = shared_mem[i];
+        fprintf(fptr, "#%d\n", sampling_rate * i);
+	    fprintf(fptr, "b");
+        for (int j = 7; j >= 0; j--) {
+	        fprintf(fptr, "%d", (value >> j) & 1);
+	    }
+	    fprintf(fptr, " B\n\n");
     }
 
-    munmap((void *)shared_mem, PRU_SHARED_MEM_SIZE_IN_BYTES);
-    close(fd);
     return SUCCESS;
+}
+
+/**
+* Cleans up vcdGenerator struct by closing the FILE* to the VCD file
+*
+* @param pruHandler         - VCDGenerator_t struct object
+*/
+void VCDGenerator_cleanup(VCDGenerator_t* vcdGenerator) {
+    fclose(vcdGenerator->fptr);
 }
