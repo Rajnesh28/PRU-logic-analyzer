@@ -20,7 +20,7 @@ void main(void) {
     for (uint32_t i = 0; i < SHARED_MEM_SIZE; i++)
         shared_mem[i] = 0;
 
-    __delay_cycles(1000000000); // 200MHz * 5 = 10s delay
+    __delay_cycles(1000000000); // 200MHz * 5 = 5s delay
 
     // Lower byte of __R31 maps completely to GPIO
     // Ideally, this while loop is kept as minimal as possible

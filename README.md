@@ -70,8 +70,6 @@ Then run it with the desired number of bytes to trace:
 ./main 61280
 ```
 
-> A Makefile is planned to simplify the build process.
-
 ---
 
 5. Open the waveform using GTKWave, `GTKWave wave.vcd`
@@ -116,4 +114,3 @@ This implementation avoids the RPMsg framework to eliminate messaging overhead a
 ## 📋 To-Do
 
 * [ ] Optimize PRU for even shorter trace loop (switch to assembly)
-* [ ] Add Makefile and clarify assumptions for user-friendliness

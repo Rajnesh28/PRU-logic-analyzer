@@ -1,14 +1,14 @@
 #include "PRUHandler.h"
 #include "VCDGenerator.h"
 
-int main(int argc, char* argv[]) {
+int main(void) {
 
-    if (argc < 2) {
-        printf("Did not successfully pass a trace size argument\n");
-        return -1;
-    }
+    printf("\tHello and Welcome to the PRU Logic Analyzer\t\n");
+    printf("Please enter the size of the requested trace in bytes: ");
+    size_t trace_size;
 
-    size_t trace_size = (size_t) atoi(argv[1]);
+    scanf("%zu", &trace_size);
+
     if (trace_size < PAGE_SIZE ) {
         printf("Requested trace size must be at least the length of a PAGE SIZE (4096 bytes) and be page aligned\n");
         return -1;
@@ -25,4 +25,6 @@ int main(int argc, char* argv[]) {
     
     PRU_cleanup(&pru_handler);
     VCDGenerator_cleanup(&vcd_generator);
+
+    return 0;
 }

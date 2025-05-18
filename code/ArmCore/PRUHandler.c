@@ -50,7 +50,7 @@ void PRU_init(size_t requestedTraceSize, PRUHandler_t *pruHandler) {
 */
 int PRU_load_firmware(void) {
     int ret;
-    ret = system("cp ../PRU/bin/pru_fw /lib/firmware/am335x-pru1-fw");
+    ret = system("cp ./code/PRU/bin/pru_fw /lib/firmware/am335x-pru1-fw");
     if (ret == -1)
         printf("Could not load firmware to PRU1 core!\n");
     return ret;
