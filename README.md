@@ -58,16 +58,10 @@ config-pin P8_40 pruin
 
 ### 4. Compile and Run
 
-Compile the analyzer:
+Compile and run it with the provided Makefile via analyzer:
 
 ```bash
-gcc main.c PRUHandler.c VCDGenerator.c -o main
-```
-
-Then run it with the desired number of bytes to trace:
-
-```bash
-./main 61280
+make trace
 ```
 
 ---
