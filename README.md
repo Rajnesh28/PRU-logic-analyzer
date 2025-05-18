@@ -71,7 +71,6 @@ Then run it with the desired number of bytes to trace:
 ```
 
 > A Makefile is planned to simplify the build process.
-> A known bug exists where the tracing ends prematurely for various input sizes.
 
 ---
 
@@ -116,6 +115,5 @@ This implementation avoids the RPMsg framework to eliminate messaging overhead a
 
 ## 📋 To-Do
 
-* [ ] Investigate trace count mismatch on some inputs
 * [ ] Optimize PRU for even shorter trace loop (switch to assembly)
 * [ ] Add Makefile and clarify assumptions for user-friendliness

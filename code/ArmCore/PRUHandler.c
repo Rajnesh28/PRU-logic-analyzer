@@ -100,18 +100,28 @@ void PRU_trace(PRUHandler_t *pruHandler) {
         while (*(sharedMemBaseAddress) == 0);
 
         if (*(sharedMemBaseAddress) == 1) {
-	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords)
+	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords) {
+		for (int i = 0; i < requested_trace_size_in_dwords - index; i++) {
+		    ddrBuffer[index + i] = *(sharedMemBaseAddress + HEADER_OFFSET + i);
+		}
 		break;
-            for (int i = 0; i < ping_or_pong_buffer_size_in_dwords; i++)
+	    }
+
+	    for (int i = 0; i < ping_or_pong_buffer_size_in_dwords; i++)
                 ddrBuffer[index + i] =  *(sharedMemBaseAddress + HEADER_OFFSET + i);
             *(sharedMemBaseAddress) = 0; }
 
         else if (*(sharedMemBaseAddress) == 2) {
-	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords)
+	    if (index + ping_or_pong_buffer_size_in_dwords > requested_trace_size_in_dwords) {
+		for (int i = 0; i < requested_trace_size_in_dwords - index; i++) {
+			ddrBuffer[index + i] = *(sharedMemBaseAddress + HEADER_OFFSET + i + ping_or_pong_buffer_size_in_dwords);
+		}
 		break;
+	    }
             for (int i = 0; i < ping_or_pong_buffer_size_in_dwords; i++) 
                 ddrBuffer[index + i] = *(sharedMemBaseAddress + HEADER_OFFSET + i + ping_or_pong_buffer_size_in_dwords);
-            *(sharedMemBaseAddress) = 0; }
+            *(sharedMemBaseAddress) = 0; 
+	}
 
 	    index += ping_or_pong_buffer_size_in_dwords;
         pruHandler->word_count += ping_or_pong_buffer_size_in_dwords;
