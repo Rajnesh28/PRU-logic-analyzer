@@ -58,7 +58,7 @@ config-pin P8_40 pruin
 
 ### 4. Compile and Run
 
-Compile and run it with the provided Makefile via analyzer:
+Compile and run it with the provided Makefile:
 
 ```bash
 make trace
